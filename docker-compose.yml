@@ -1,0 +1,72 @@
+# Run: docker compose up -d. Secrets go to .env next to this file (not in git); see .env.example.
+name: mem
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16@sha256:7b822b0aac60967beb1ea5e576b8602c94c300a157d187f385ae3e0da199b90a
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: mem
+      POSTGRES_USER: mem
+      POSTGRES_PASSWORD: ${MEM_DB_PASSWORD:?set MEM_DB_PASSWORD in .env}
+    volumes:
+      - mem_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mem -d mem"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    mem_limit: 512m
+
+  api:
+    build: .
+    image: mem-api:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      MEM_DATABASE_URL: postgresql://mem:${MEM_DB_PASSWORD}@postgres:5432/mem
+    ports:
+      - "127.0.0.1:3120:3120"
+    networks:
+      default: {}
+      mem_clients:
+        aliases: [mem-api]   # client containers connect here; Postgres is not on this network (A-3)
+    volumes:
+      - mem_models:/models
+    mem_limit: 1536m   # e5-small + onnxruntime is about 820 MB when idle
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:3120/healthz', timeout=3).status == 200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 120s
+
+  worker:
+    image: mem-api:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      api:
+        condition: service_started
+    env_file: .env
+    environment:
+      MEM_DATABASE_URL: postgresql://mem:${MEM_DB_PASSWORD}@postgres:5432/mem
+      MEM_EXPORT_DIR: /exports
+    command: ["python", "-m", "mem.jobs"]
+    volumes:
+      - mem_exports:/exports
+      - mem_models:/models
+    mem_limit: 1280m   # about 60 MB when idle; the embedding model is loaded only for the deep sleep
+
+volumes:
+  mem_pg:
+  mem_models:
+  mem_exports:
+
+networks:
+  mem_clients:
+    name: mem_clients

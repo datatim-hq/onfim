@@ -1,0 +1,40 @@
+# Test stand: a separate Compose project, the database in tmpfs. Run:
+#   docker compose -f docker-compose.test.yml run --rm --build tests
+name: mem-test
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16@sha256:7b822b0aac60967beb1ea5e576b8602c94c300a157d187f385ae3e0da199b90a
+    environment:
+      POSTGRES_DB: mem
+      POSTGRES_USER: mem
+      POSTGRES_PASSWORD: test
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mem -d mem"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  tests:
+    build:
+      context: .
+      args:
+        DEV: "1"
+    image: mem-api:test
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      MEM_DATABASE_URL: postgresql://mem:test@postgres:5432/mem
+      MEM_EMBED_MODEL: fake
+      MEM_EMBED_DIM: "64"
+      MEM_STAND: "1"
+      MEM_STATUS_SECRET: test-status
+    volumes:
+      - mem_test_models:/models
+    command: ["python", "-m", "pytest", "-q", "-p", "no:cacheprovider", "tests"]
+
+volumes:
+  mem_test_models:
