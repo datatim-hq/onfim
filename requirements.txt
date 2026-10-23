@@ -1,0 +1,9 @@
+fastapi>=0.115,<0.162
+uvicorn[standard]>=0.34,<0.40
+psycopg[binary,pool]>=3.2,<3.4
+pgvector>=0.4,<0.6
+numpy>=1.26,<3
+fastembed==0.8.1
+mcp==1.30.0
+httpx[socks]>=0.27   # SOCKS5 for Telegram alerts (MEM_TG_PROXY)
+tzdata>=2024.1
