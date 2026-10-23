@@ -1,4 +1,4 @@
-fastapi>=0.152.0,<0.162
+fastapi>=0.156.4,<0.162
 uvicorn[standard]>=0.54.0,<0.55
 psycopg[binary,pool]>=3.3.6,<3.4
 pgvector>=0.5.1,<0.6
