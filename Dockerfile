@@ -1,5 +1,5 @@
 # Pinned: the base image by digest, libraries from hashed lock files (tools/lock.sh)
-FROM python:3.12.15-slim@sha256:a6e34c598f2467ed0e9a8d349809fcd8b5c603269512df273a0bb1784edc11b1
+FROM python:3.15.1-slim@sha256:533b0b2f9b5d46fd097091cf826f27902f1d6c3bca714b6dc74551356aa97a51
 
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 \
     FASTEMBED_CACHE_PATH=/models HF_HOME=/models/hf
